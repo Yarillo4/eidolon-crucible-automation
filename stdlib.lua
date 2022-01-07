@@ -114,7 +114,12 @@ function Time.timestamp()
 end
 
 local function crc32()
-	--[[	Copyright (C) 2022 SafeteeWoW github.com/SafeteeWoW
+	--[[
+	This function is taken from github.com/SafeteeWoW 
+	It has been modified slightly
+	
+	
+	Copyright (C) 2022 SafeteeWoW github.com/SafeteeWoW
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
