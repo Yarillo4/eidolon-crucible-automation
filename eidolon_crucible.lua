@@ -3,6 +3,7 @@ require "stdlib"
 local user = peripheral.find("cyclic:user")
 local waterSide = "bottom"
 local stirSide = "left"
+local crafterSide = "right"
 
 local recipes = {
 	[1]={
@@ -13,16 +14,54 @@ local recipes = {
 			"wait",
 			"wait",
 			"wait",
+			"wait",
+			"wait",
+			"wait",
 		}, 
 		{
 			{count=2, name="minecraft:bone_meal"},
 			"stir",
 			"stir",
+			"wait",
 		}, 
 		{
-			{count=1, name="minecraft:charcoal"}
+			{count=1, name="minecraft:charcoal"},
+			"wait",
+			"wait",
 		}
-	}
+	},
+	[2]={
+		{
+			{count=1, name="minecraft:coal"},
+			"wait",
+			"wait",
+			"wait",
+			"wait",
+			"wait",
+			"wait",
+			"wait",
+		},
+		{
+			{count=1, name="minecraft:ghast_tear"},
+			{count=1, name="eidolon:death_essence"},
+			"stir",
+			"wait",
+			"wait",
+			"wait",
+		}, 
+		{
+			{count=2, name="eidolon:soul_shard"},
+			{count=1, name="eidolon:death_essence"},
+			"wait",
+			"stir",
+			"wait",
+			"wait",
+			"wait",
+		}, 
+		{
+			{count=1, name="minecraft:diamond"}
+		}
+	},
 }
 
 function turtle.list()
@@ -33,10 +72,23 @@ function turtle.list()
 	return inv
 end
 
+function tableSafeConcat(t, str)
+	local ret = ""
+	for i,v in pairs(t) do
+		ret = ret .. tostring(v) .. str
+	end
+	return ret
+end
+
 local function inventoryToTableOfStrings(inv)
-	local t = {}
+	local tByName = {}
 	for i,v in pairs(inv) do
-		t[i] = v.count .. ":" .. v.name
+		tByName[v.name] = (tByName[v.name] or 0) + v.count
+	end
+
+	local t = {}
+	for i,v in pairs(tByName) do
+		table.insert(t, v .. ":" .. i)
 	end
 
 	return t
@@ -44,13 +96,13 @@ end
 
 local function serializeInventory(inv)
 	local t = inventoryToTableOfStrings(inv)
-	return table.concat(t, ";")
+	return tableSafeConcat(t, ";")
 end
 
 local function hashInventory(inv)
 	local t = inventoryToTableOfStrings(inv)
 	table.sort(t)
-	return Crypto.crc32(table.concat(t, ";"))
+	return Crypto.crc32(tableSafeConcat(t, ";"))
 end
 
 local function recipeToInventory(recipe)
@@ -130,10 +182,12 @@ local function executeRecipe(recipe, stepWait)
 	for i,step in pairs(recipe) do
 		for j,ingredient in pairs(step) do
 			if type(ingredient) == "table" then
+				Debug.debug("Dropping " .. ingredient.name .. "*" .. ingredient.count)
 				turtle.findSelect(ingredient.name)
 				turtle.dropUp(ingredient.count)
 			elseif type(ingredient) == "string" then
 				if     ingredient == "stir" then
+					Debug.debug("Stir...")
 					stir()
 				elseif ingredient == "wait" then
 					sleep(1)
@@ -141,13 +195,17 @@ local function executeRecipe(recipe, stepWait)
 			end
 		end
 
-		sleep(stepWait or 3.5)
+		sleep(stepWait or 0.5)
 	end
+
+	redstone.pulse(crafterSide, 1)
 end
 
-local recipesHTable = recipesByHash(recipes)
 
+local recipesHTable = recipesByHash(recipes)
 local lastRecipe = -1
+redstone.pulse(crafterSide, 1)
+
 while true do
 	local hash = hashInventory(turtle.list())
 	if recipesHTable[hash] then
